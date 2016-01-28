@@ -94,9 +94,7 @@ function getTweet(tweet){
 
 
 document.getElementById('good').onclick = function(event){
-    GET(tweets[id]+'/1', function(){
-        keyPress(39);
-    });
+    keyPress(38);
 }
 
 document.getElementById('osef').onclick = function(event){
@@ -106,9 +104,7 @@ document.getElementById('osef').onclick = function(event){
 }
 
 document.getElementById('notgood').onclick = function(event){
-    GET(tweets[id]+'/-1', function(){
-        keyPress(39);
-    });
+    keyPress(40);
 }
 
 document.onkeydown = function(event) {
@@ -134,6 +130,12 @@ function keyPress(keyPressed){
                 id -= 1;
             }
             break;
+        case 38:
+            //up
+            GET(tweets[id]+'/1', function(){
+                keyPress(39);
+            });
+            break;
         case 39:
             //right
             if(id === tweets.length-1){
@@ -142,6 +144,12 @@ function keyPress(keyPressed){
             else{
                 id += 1;
             }
+            break;
+        case 40:
+            //up
+            GET(tweets[id]+'/-1', function(){
+                keyPress(39);
+            });
             break;
     }
     if(keyPressed === 37 || keyPressed === 39){

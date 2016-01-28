@@ -61,9 +61,9 @@ if sys.argv[1] == 'pull':
         statusDict = status.AsDict()
         try:
             filteredDict = {
-                'retweeted'         : statusDict['retweeted'],
-                'favorited'         : statusDict['favorited'],
-                'lang'              : statusDict['lang'],
+                'retweeted' : statusDict['retweeted'],
+                'favorited' : statusDict['favorited'],
+                'lang'      : statusDict['lang'],
             }
 
             filteredDict.update(getUserInfos(statusDict, 'origuser'))
@@ -74,6 +74,7 @@ if sys.argv[1] == 'pull':
             else:
                 filteredDict['retweeted_status'] = 0
                 filteredDict.update(getTweetInfos(statusDict))
+                
         except Exception as e:
             print e
             print status.AsJsonString()
