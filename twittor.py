@@ -16,6 +16,7 @@ from sklearn import svm
 from sklearn.naive_bayes import GaussianNB
 import pickle
 from textblob import TextBlob
+from unidecode import unidecode
 
 if len(sys.argv) < 2:
     print 'Usage: python %s <pull|qualify|train|test>'%sys.argv[0]
@@ -111,10 +112,11 @@ def convertToScikit(trainRaw):
     }
     if trainRaw['lang'] != 'en':
         try:
-            blob = TextBlob(trainRaw['text'].replace(u'\u2019', '\''))
+            blob = TextBlob(trainRaw['text'].decode('utf8'))
         except Exception as e:
-            print e
+            print type(trainRaw['text'])
             print trainRaw['text']
+            blob = TextBlob(trainRaw['text'].decode('utf8'))
             sys.exit()
         try:
             text = blob.translate(to='en')
@@ -122,10 +124,11 @@ def convertToScikit(trainRaw):
             text = blob
     else:
         try:
-            text = TextBlob(trainRaw['text'].replace(u'\u2019', '\''))
+            text = TextBlob(trainRaw['text'].decode('utf8'))
         except Exception as e:
-            print e
+            print type(trainRaw['text'])
             print trainRaw['text']
+            text = TextBlob(trainRaw['text'].decode('utf8'))
             sys.exit()
     polarity = text.sentiment.polarity
     subjectivity = text.sentiment.subjectivity
