@@ -12,6 +12,45 @@ if len(sys.argv) != 2:
 
 r = redis.StrictRedis(host='localhost', port=6379, db=3)
 
+def getTweetInfos(statusDict):
+    filteredDict = {}
+    if 'favorite_count' in statusDict:
+        filteredDict['favorite_count'] = statusDict['favorite_count']
+    else:
+        filteredDict['favorite_count'] = 0
+    if 'retweet_count' in statusDict:
+        filteredDict['retweet_count'] = statusDict['retweet_count']
+    else:
+        filteredDict['retweet_count'] = 0
+
+    if 'followers_count' in statusDict:
+        filteredDict['userFollowers_count'] = statusDict['followers_count']
+    else:
+        filteredDict['userFollowers_count'] = 0
+    if 'friends_count' in statusDict:
+        filteredDict['userFriends_count'] = statusDict['friends_count']
+    else:
+        filteredDict['userFriends_count'] = 0
+
+    if 'media' in statusDict:
+        filteredDict['media'] = len(statusDict['media'])
+    else:
+        filteredDict['media'] = 0
+
+    if 'hashtags' in statusDict:
+        filteredDict['hashtags'] = statusDict['hashtags']
+    else:
+        filteredDict['hashtags'] = []
+
+    filteredDict['userProtected'] = statusDict['user']['protected']
+    filteredDict['userLang'] = statusDict['user']['lang']
+    filteredDict['userId'] = statusDict['user']['id']
+    filteredDict['userVerified'] = 'verified' in statusDict['user']
+    filteredDict['text'] = statusDict['text']
+
+    return filteredDict
+
+
 if sys.argv[1] == 'pull':
     api = twitter.Api(
         consumer_key        = secret.consumer_key, 
@@ -46,74 +85,10 @@ if sys.argv[1] == 'pull':
                 
             if 'retweeted_status' in statusDict:
                 filteredDict['retweeted_status'] = 1
-                if 'favorite_count' in statusDict['retweeted_status']:
-                    filteredDict['favorite_count'] = statusDict['retweeted_status']['favorite_count']
-                else:
-                    filteredDict['favorite_count'] = 0
-                if 'retweet_count' in statusDict['retweeted_status']:
-                    filteredDict['retweet_count'] = statusDict['retweeted_status']['retweet_count']
-                else:
-                    filteredDict['retweet_count'] = 0
-
-                if 'followers_count' in statusDict['retweeted_status']:
-                    filteredDict['userFollowers_count'] = statusDict['retweeted_status']['followers_count']
-                else:
-                    filteredDict['userFollowers_count'] = 0
-                if 'friends_count' in statusDict['retweeted_status']:
-                    filteredDict['userFriends_count'] = statusDict['retweeted_status']['friends_count']
-                else:
-                    filteredDict['userFriends_count'] = 0
-                
-                if 'media' in statusDict['retweeted_status']:
-                    filteredDict['media'] = len(statusDict['retweeted_status']['media'])
-                else:
-                    filteredDict['media'] = 0
-
-                if 'hashtags' in statusDict['retweeted_status']:
-                    filteredDict['hashtags'] = statusDict['retweeted_status']['hashtags']
-                else:
-                    filteredDict['hashtags'] = []
-                
-                filteredDict['userProtected'] = statusDict['retweeted_status']['user']['protected']
-                filteredDict['userLang'] = statusDict['retweeted_status']['user']['lang']
-                filteredDict['userId'] = statusDict['retweeted_status']['user']['id']
-                filteredDict['userVerified'] = 'verified' in statusDict['retweeted_status']['user']
-                filteredDict['text'] = statusDict['retweeted_status']['text']
+                filteredDict.update(getTweetInfos(statusDict['retweeted_status']))
             else:
                 filteredDict['retweeted_status'] = 0
-                if 'favorite_count' in statusDict:
-                    filteredDict['favorite_count'] = statusDict['favorite_count']
-                else:
-                    filteredDict['favorite_count'] = 0
-                if 'retweet_count' in statusDict:
-                    filteredDict['retweet_count'] = statusDict['retweet_count']
-                else:
-                    filteredDict['retweet_count'] = 0
-
-                if 'followers_count' in statusDict:
-                    filteredDict['userFollowers_count'] = statusDict['followers_count']
-                else:
-                    filteredDict['userFollowers_count'] = 0
-                if 'friends_count' in statusDict:
-                    filteredDict['userFriends_count'] = statusDict['friends_count']
-                else:
-                    filteredDict['userFriends_count'] = 0
-
-                if 'media' in statusDict:
-                    filteredDict['media'] = len(statusDict['media'])
-                else:
-                    filteredDict['media'] = 0
-
-                if 'hashtags' in statusDict:
-                    filteredDict['hashtags'] = statusDict['hashtags']
-                else:
-                    filteredDict['hashtags'] = []
-
-                filteredDict['userProtected'] = statusDict['user']['protected']
-                filteredDict['userLang'] = statusDict['user']['lang']
-                filteredDict['userId'] = statusDict['user']['id']
-                filteredDict['userVerified'] = 'verified' in statusDict['user']
-                filteredDict['text'] = statusDict['text']
+                filteredDict.update(getTweetInfos(statusDict))
         except Exception as e:
             print e
             print status.AsJsonString()
