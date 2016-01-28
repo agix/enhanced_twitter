@@ -89,6 +89,8 @@ function getTweet(tweet){
             document.getElementById('osef').style.fontSize = 13;
             document.getElementById('notgood').style.fontSize = 13;
         }
+
+        document.getElementById('osef').textContent = ''+(id+1)+'/'+tweets.length;
     });
 }
 
@@ -146,7 +148,7 @@ function keyPress(keyPressed){
             }
             break;
         case 40:
-            //up
+            //down
             GET(tweets[id]+'/-1', function(){
                 keyPress(39);
             });

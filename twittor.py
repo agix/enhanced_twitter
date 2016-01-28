@@ -5,6 +5,8 @@ import sys
 from bottle import route, run, template, response
 from json import dumps, loads
 import secret
+import datetime
+from progress.bar import Bar
 
 if len(sys.argv) != 2:
     print 'Usage: python %s <pull|qualify|train>'%sys.argv[0]
@@ -22,14 +24,17 @@ def addFeature(statusDict, key, func=lambda x: x, default = 0):
 
 def getTweetInfos(statusDict):
     filteredDict = {}
-    filteredDict['favorite_count'] = addFeature(statusDict, 'favorite_count')
-    filteredDict['retweet_count']  = addFeature(statusDict, 'retweet_count')
-    filteredDict['created_at']     = addFeature(statusDict, 'created_at')
+    filteredDict['favorite_count']   = addFeature(statusDict, 'favorite_count')
+    filteredDict['retweet_count']    = addFeature(statusDict, 'retweet_count')
+    filteredDict['created_at']       = addFeature(statusDict, 'created_at')
     
-    filteredDict['media']          = addFeature(statusDict, 'media', len)
-    filteredDict['hashtags']       = addFeature(statusDict, 'hashtags', lambda x: ' '.join(x), '')
+    filteredDict['nbMedia']          = addFeature(statusDict, 'media', len)
+    filteredDict['nbUser_mentions']  = addFeature(statusDict, 'user_mentions', len)
+    filteredDict['user_mentions']    = addFeature(statusDict, 'user_mentions', lambda x: ' '.join(' '.join([y['screen_name'] for y in x])))
+    filteredDict['nbHashtags']       = addFeature(statusDict, 'hashtags', len)
+    filteredDict['hashtags']         = addFeature(statusDict, 'hashtags', lambda x: ' '.join(x), '')
     
-    filteredDict['text']           = statusDict['text']
+    filteredDict['text']             = statusDict['text']
 
     filteredDict.update(getUserInfos(statusDict))
 
@@ -43,11 +48,27 @@ def getUserInfos(statusDict, prefix = 'user'):
     filteredDict[prefix+'Protected']       = statusDict['user']['protected']
     filteredDict[prefix+'Lang']            = statusDict['user']['lang']
     filteredDict[prefix+'Id']              = statusDict['user']['id']
+    filteredDict[prefix+'Screen_name']     = statusDict['user']['screen_name']
     filteredDict[prefix+'Verified']        = 'verified' in statusDict['user']
+    filteredDict[prefix+'NbTweetsHour']    = getNbTweets(statusDict['user']['id'], statusDict['id'], statusDict['created_at'])
     return filteredDict
+
+def getNbTweets(userId, max_id, created_at, minutes = 60, count = 20):
+    global api
+    fromDate = datetime.datetime.strptime(created_at, '%a %b %d %H:%M:%S +0000 %Y')
+    toDate = fromDate - datetime.timedelta(minutes = minutes)
+    statuses = api.GetUserTimeline(userId, max_id=max_id, count=count, exclude_replies=True)
+    nb = 0
+    for status in statuses:
+        statusDict = status.AsDict()
+        date = datetime.datetime.strptime(statusDict['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
+        if date > toDate:
+            nb += 1
+    return nb
 
 
 if sys.argv[1] == 'pull':
+    count = 150
     api = twitter.Api(
         consumer_key        = secret.consumer_key, 
         consumer_secret     = secret.consumer_secret, 
@@ -55,10 +76,13 @@ if sys.argv[1] == 'pull':
         access_token_secret = secret.access_token_secret
     )
 
-    statuses = api.GetHomeTimeline(count=200)
-
+    statuses = api.GetHomeTimeline(count=count)
+    print "Got your timeline"
+    bar = Bar('Processing', max=count)
     for status in statuses:
         statusDict = status.AsDict()
+        bar.next()
+
         try:
             filteredDict = {
                 'retweeted' : statusDict['retweeted'],
@@ -74,13 +98,17 @@ if sys.argv[1] == 'pull':
             else:
                 filteredDict['retweeted_status'] = 0
                 filteredDict.update(getTweetInfos(statusDict))
-                
+
         except Exception as e:
-            print e
+            if e[0][0]['code'] == 88:
+                bar.finish()
+                print e[0][0]['message']
+                sys.exit()
             print status.AsJsonString()
 
             
         r.hmset(statusDict['id'], filteredDict)
+    bar.finish()
 
 elif sys.argv[1] == 'qualify':
     @route('/')
