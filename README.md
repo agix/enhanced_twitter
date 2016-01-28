@@ -10,7 +10,7 @@ Enhanced twitter experience with machine learning
  
 Download redis http://redis.io/download
 
-Create secret.py :
+Create `secret.py` :
 ```
 consumer_key        = 'bla'
 consumer_secret     = 'bla2'
@@ -19,7 +19,7 @@ access_token_secret = 'bla4'
 ```
 
 ## Usage
-Usage: python twittor.py <pull|qualify|train>
+`Usage: python twittor.py <pull|qualify|train>`
 
 * `pull` to pull the last 200 tweets from your timeline
 * `qualify` run a mini webserver -> http://localhost:8081/ and qualify your tweets
