@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
     twttr.events.bind(
         'loaded',
         function (event) {
-            console.log('boom');
             if(document.getElementById('good').style.fontSize === '15px'){
                 document.getElementById('currentTweet').children[0].style.border = '1px solid green';
             }

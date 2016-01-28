@@ -32,7 +32,7 @@ if sys.argv[1] == 'pull':
                 'origuserProtected' : statusDict['user']['protected'],
                 'origuserLang'      : statusDict['user']['lang'],
                 'origuserId'        : statusDict['user']['id'],
-                'origuserVerified'  :'verified' in statusDict['user']
+                'origuserVerified'  : 'verified' in statusDict['user']
             }
 
             if 'followers_count' in statusDict:
@@ -64,10 +64,21 @@ if sys.argv[1] == 'pull':
                 else:
                     filteredDict['userFriends_count'] = 0
                 
+                if 'media' in statusDict['retweeted_status']:
+                    filteredDict['media'] = len(statusDict['retweeted_status']['media'])
+                else:
+                    filteredDict['media'] = 0
+
+                if 'hashtags' in statusDict['retweeted_status']:
+                    filteredDict['hashtags'] = statusDict['retweeted_status']['hashtags']
+                else:
+                    filteredDict['hashtags'] = []
+                
                 filteredDict['userProtected'] = statusDict['retweeted_status']['user']['protected']
                 filteredDict['userLang'] = statusDict['retweeted_status']['user']['lang']
                 filteredDict['userId'] = statusDict['retweeted_status']['user']['id']
                 filteredDict['userVerified'] = 'verified' in statusDict['retweeted_status']['user']
+                filteredDict['text'] = statusDict['retweeted_status']['text']
             else:
                 filteredDict['retweeted_status'] = 0
                 if 'favorite_count' in statusDict:
@@ -88,10 +99,21 @@ if sys.argv[1] == 'pull':
                 else:
                     filteredDict['userFriends_count'] = 0
 
+                if 'media' in statusDict:
+                    filteredDict['media'] = len(statusDict['media'])
+                else:
+                    filteredDict['media'] = 0
+
+                if 'hashtags' in statusDict:
+                    filteredDict['hashtags'] = statusDict['hashtags']
+                else:
+                    filteredDict['hashtags'] = []
+
                 filteredDict['userProtected'] = statusDict['user']['protected']
                 filteredDict['userLang'] = statusDict['user']['lang']
                 filteredDict['userId'] = statusDict['user']['id']
                 filteredDict['userVerified'] = 'verified' in statusDict['user']
+                filteredDict['text'] = statusDict['text']
         except Exception as e:
             print e
             print status.AsJsonString()
