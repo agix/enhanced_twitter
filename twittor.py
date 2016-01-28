@@ -7,9 +7,10 @@ from json import dumps, loads
 import secret
 import datetime
 from progress.bar import Bar
+import numpy as np
 
 if len(sys.argv) != 2:
-    print 'Usage: python %s <pull|qualify|train>'%sys.argv[0]
+    print 'Usage: python %s <pull|qualify|train|test> (tweet id)'%sys.argv[0]
     sys.exit(0)
 
 r = redis.StrictRedis(host='localhost', port=6379, db=3)
@@ -22,7 +23,7 @@ def addFeature(statusDict, key, func=lambda x: x, default = 0):
 
     return feature
 
-def getTweetInfos(statusDict):
+def getTweetInfos(statusDict, nbTweets = -1):
     filteredDict = {}
     filteredDict['favorite_count']   = addFeature(statusDict, 'favorite_count')
     filteredDict['retweet_count']    = addFeature(statusDict, 'retweet_count')
@@ -36,12 +37,13 @@ def getTweetInfos(statusDict):
     
     filteredDict['text']             = statusDict['text']
 
-    filteredDict.update(getUserInfos(statusDict))
+
+    filteredDict.update(getUserInfos(statusDict, nbTweets))
 
     return filteredDict
 
 
-def getUserInfos(statusDict, prefix = 'user'):
+def getUserInfos(statusDict, prefix = 'user', nbTweets = -1):
     filteredDict = {}
     filteredDict[prefix+'Followers_count'] = addFeature(statusDict, 'followers_count')
     filteredDict[prefix+'Friends_count']   = addFeature(statusDict, 'friends_count')
@@ -50,7 +52,10 @@ def getUserInfos(statusDict, prefix = 'user'):
     filteredDict[prefix+'Id']              = statusDict['user']['id']
     filteredDict[prefix+'Screen_name']     = statusDict['user']['screen_name']
     filteredDict[prefix+'Verified']        = 'verified' in statusDict['user']
-    filteredDict[prefix+'NbTweetsHour']    = getNbTweets(statusDict['user']['id'], statusDict['id'], statusDict['created_at'])
+    if nbTweets == -1:
+        filteredDict[prefix+'NbTweetsHour']    = getNbTweets(statusDict['user']['id'], statusDict['id'], statusDict['created_at'])
+    else:
+        filteredDict[prefix+'NbTweetsHour'] = nbTweets
     return filteredDict
 
 def getNbTweets(userId, max_id, created_at, minutes = 60, count = 20):
@@ -65,6 +70,7 @@ def getNbTweets(userId, max_id, created_at, minutes = 60, count = 20):
         if date > toDate:
             nb += 1
     return nb
+
 
 
 if sys.argv[1] == 'pull':
@@ -89,25 +95,28 @@ if sys.argv[1] == 'pull':
                 'favorited' : statusDict['favorited'],
                 'lang'      : statusDict['lang'],
             }
-
-            filteredDict.update(getUserInfos(statusDict, 'origuser'))
+            origuser = getUserInfos(statusDict, 'origuser')
+            filteredDict.update(origuser)
                 
             if 'retweeted_status' in statusDict:
                 filteredDict['retweeted_status'] = 1
                 filteredDict.update(getTweetInfos(statusDict['retweeted_status']))
+                created_at = datetime.datetime.strptime(statusDict['retweeted_status']['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
             else:
                 filteredDict['retweeted_status'] = 0
-                filteredDict.update(getTweetInfos(statusDict))
+                filteredDict.update(getTweetInfos(statusDict, origuser['origuserNbTweetsHour']))
+                created_at = datetime.datetime.strptime(statusDict['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
 
         except Exception as e:
             if e[0][0]['code'] == 88:
                 bar.finish()
                 print e[0][0]['message']
                 sys.exit()
+            print e
             print status.AsJsonString()
 
-            
-        r.hmset(statusDict['id'], filteredDict)
+        tweetId = '%04d%02d%02d_%d'%(created_at.year, created_at.month, created_at.day, statusDict['id'])
+        r.hmset(tweetId, filteredDict)
     bar.finish()
 
 elif sys.argv[1] == 'qualify':
@@ -133,30 +142,65 @@ elif sys.argv[1] == 'qualify':
 
     run(host='localhost', port=8081)
 
-    # tweet_ids = r.keys('*')
-    # for tweet_id in tweet_ids:
-    #     r.hget
+elif sys.argv[1] == 'train':
+    userLangs = {
+        'en': float(1),
+        'fr': float(2),
+        'ht': float(3)
+    }
+    now = datetime.datetime.now()
+    trainIds = r.keys('%04d%02d*'%(now.year, now.month))
+    trainSamples = []
+    targetSamples = []
+    for trainId in trainIds:
+        trainRaw = r.hgetall(trainId)
+        trainSample = [
+            userLangs[trainRaw['userLang']], float(trainRaw['retweeted_status']), float(bool(trainRaw['userProtected'])), 
+            float(bool(trainRaw['origuserVerified'])), userLangs[trainRaw['origuserLang']], float(bool(trainRaw['origuserProtected'])),
+            userLangs[trainRaw['lang']], float(trainRaw['userFollowers_count']), float(trainRaw['favorite_count']),
+            float(trainRaw['userId']), float(trainRaw['origuserId']), float(bool(trainRaw['userVerified'])), float(trainRaw['userNbTweetsHour']),
+            float(trainRaw['nbUser_mentions']), float(trainRaw['origuserFriends_count']), float(trainRaw['origuserFollowers_count']),
+            float(bool(trainRaw['retweeted'])), float(trainRaw['origuserNbTweetsHour']), float(trainRaw['nbMedia']), float(trainRaw['userFriends_count']),
+            float(trainRaw['retweet_count']), float(bool(trainRaw['favorited'])), float(trainRaw['nbHashtags'])
+        ]
+        if 'like' in trainRaw:
+            targetSamples.append(float(trainRaw['like']))
+        else:
+            targetSamples.append(float(0))
 
-#Status:
-#favorite_count
-#retweeted
-#favorited
-#retweet_count
-#lang
-#retweeted_status
+        trainSamples.append(trainSample)
 
-#User:
-#protected
-#lang
-#followers_count
-#friends_count
-#id
-#verified
+    targetSamples = np.array(targetSamples)
+    trainSamples  = np.array(trainSamples)
+    print trainSamples
 
-#OrigUser:
-#protected
-#lang
-#followers_count
-#friends_count
-#id
-#verified
+
+# "userLang"
+# "retweeted_status"
+# "userProtected"
+# "origuserVerified"
+# "origuserLang"
+# "origuserProtected"
+# "hashtags"
+# "lang"
+# "userFollowers_count"
+# "favorite_count"
+# "userId"
+# "origuserId"
+# "userVerified"
+# "userNbTweetsHour"
+# "nbUser_mentions"
+# "origuserScreen_name"
+# "created_at"
+# "origuserFriends_count"
+# "origuserFollowers_count"
+# "userScreen_name"
+# "retweeted"
+# "origuserNbTweetsHour"
+# "nbMedia"
+# "userFriends_count"
+# "retweet_count"
+# "favorited"
+# "user_mentions"
+# "text"
+# "nbHashtags"
