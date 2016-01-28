@@ -12,42 +12,38 @@ if len(sys.argv) != 2:
 
 r = redis.StrictRedis(host='localhost', port=6379, db=3)
 
+def addFeature(statusDict, key, func=lambda x: x, default = 0):
+    if key in statusDict:
+        feature = func(statusDict[key])
+    else:
+        feature = default
+
+    return feature
+
 def getTweetInfos(statusDict):
     filteredDict = {}
-    if 'favorite_count' in statusDict:
-        filteredDict['favorite_count'] = statusDict['favorite_count']
-    else:
-        filteredDict['favorite_count'] = 0
-    if 'retweet_count' in statusDict:
-        filteredDict['retweet_count'] = statusDict['retweet_count']
-    else:
-        filteredDict['retweet_count'] = 0
+    filteredDict['favorite_count'] = addFeature(statusDict, 'favorite_count')
+    filteredDict['retweet_count']  = addFeature(statusDict, 'retweet_count')
+    filteredDict['created_at']     = addFeature(statusDict, 'created_at')
+    
+    filteredDict['media']          = addFeature(statusDict, 'media', len)
+    filteredDict['hashtags']       = addFeature(statusDict, 'hashtags', lambda x: ' '.join(x), '')
+    
+    filteredDict['text']           = statusDict['text']
 
-    if 'followers_count' in statusDict:
-        filteredDict['userFollowers_count'] = statusDict['followers_count']
-    else:
-        filteredDict['userFollowers_count'] = 0
-    if 'friends_count' in statusDict:
-        filteredDict['userFriends_count'] = statusDict['friends_count']
-    else:
-        filteredDict['userFriends_count'] = 0
+    filteredDict.update(getUserInfos(statusDict))
 
-    if 'media' in statusDict:
-        filteredDict['media'] = len(statusDict['media'])
-    else:
-        filteredDict['media'] = 0
+    return filteredDict
 
-    if 'hashtags' in statusDict:
-        filteredDict['hashtags'] = statusDict['hashtags']
-    else:
-        filteredDict['hashtags'] = []
 
-    filteredDict['userProtected'] = statusDict['user']['protected']
-    filteredDict['userLang'] = statusDict['user']['lang']
-    filteredDict['userId'] = statusDict['user']['id']
-    filteredDict['userVerified'] = 'verified' in statusDict['user']
-    filteredDict['text'] = statusDict['text']
-
+def getUserInfos(statusDict, prefix = 'user'):
+    filteredDict = {}
+    filteredDict[prefix+'Followers_count'] = addFeature(statusDict, 'followers_count')
+    filteredDict[prefix+'Friends_count']   = addFeature(statusDict, 'friends_count')
+    filteredDict[prefix+'Protected']       = statusDict['user']['protected']
+    filteredDict[prefix+'Lang']            = statusDict['user']['lang']
+    filteredDict[prefix+'Id']              = statusDict['user']['id']
+    filteredDict[prefix+'Verified']        = 'verified' in statusDict['user']
     return filteredDict
 
 
@@ -68,20 +64,9 @@ if sys.argv[1] == 'pull':
                 'retweeted'         : statusDict['retweeted'],
                 'favorited'         : statusDict['favorited'],
                 'lang'              : statusDict['lang'],
-                'origuserProtected' : statusDict['user']['protected'],
-                'origuserLang'      : statusDict['user']['lang'],
-                'origuserId'        : statusDict['user']['id'],
-                'origuserVerified'  : 'verified' in statusDict['user']
             }
 
-            if 'followers_count' in statusDict:
-                filteredDict['origuserFollowers_count'] = statusDict['followers_count']
-            else:
-                filteredDict['origuserFollowers_count'] = 0
-            if 'friends_count' in statusDict:
-                filteredDict['origuserFriends_count'] = statusDict['friends_count']
-            else:
-                filteredDict['origuserFriends_count'] = 0
+            filteredDict.update(getUserInfos(statusDict, 'origuser'))
                 
             if 'retweeted_status' in statusDict:
                 filteredDict['retweeted_status'] = 1
