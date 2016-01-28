@@ -100,9 +100,7 @@ document.getElementById('good').onclick = function(event){
 }
 
 document.getElementById('osef').onclick = function(event){
-    GET(tweets[id]+'/0', function(){
-        keyPress(39);
-    });
+    keyPress(32);
 }
 
 document.getElementById('notgood').onclick = function(event){
@@ -123,6 +121,12 @@ document.onkeydown = function(event) {
 
 function keyPress(keyPressed){
     switch (keyPressed) {
+        case 32:
+            //space
+            GET(tweets[id]+'/0', function(){
+                keyPress(39);
+            });
+            break;
         case 37:
             //left
             if(id === 0){

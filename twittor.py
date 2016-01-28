@@ -124,7 +124,14 @@ if sys.argv[1] == 'pull':
 elif sys.argv[1] == 'qualify':
     @route('/')
     def index():
-        tweets = r.keys('*')
+        tweetIds = r.keys('*')
+        if len(sys.argv) == 2:
+            tweets = []
+            for tweetId in tweetIds:
+                if not r.hget(tweetId, 'like'):
+                    tweets.append(tweetId.split('_')[1])
+        else:
+            tweets = map(lambda x: x.split('_')[1], tweetIds)
         return template('index', tweets=tweets)
 
     @route('/<id>')
