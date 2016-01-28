@@ -10,6 +10,8 @@ Enhanced twitter experience with machine learning
 * `pip install progress`
 * `pip install numpy`
 * `pip install scikit-learn`
+* `pip install textblob`
+* `python -m textblob.download_corpora`
  
 Download redis http://redis.io/download
 
