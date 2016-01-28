@@ -1,3 +1,4 @@
+<head><title>Twittor</title></head>
 <script src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 <style>
 #currentTweet iframe{

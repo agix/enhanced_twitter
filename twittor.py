@@ -8,6 +8,12 @@ import secret
 import datetime
 from progress.bar import Bar
 import numpy as np
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.cross_validation import KFold, cross_val_score
+from sklearn import svm
+from sklearn.naive_bayes import GaussianNB
 
 if len(sys.argv) < 2:
     print 'Usage: python %s <pull|qualify|train|test> (tweet id)'%sys.argv[0]
@@ -156,7 +162,13 @@ elif sys.argv[1] == 'train':
     userLangs = {
         'en': float(1),
         'fr': float(2),
-        'ht': float(3)
+        'ht': float(3),
+        'de': float(4),
+        'et': float(5),
+        'es': float(6),
+        'tl': float(7),
+        'in': float(8),
+        'da': float(9),
     }
     now = datetime.datetime.now()
     trainIds = r.keys('%04d%02d*'%(now.year, now.month))
@@ -180,9 +192,28 @@ elif sys.argv[1] == 'train':
 
         trainSamples.append(trainSample)
 
-    targetSamples = np.array(targetSamples)
     trainSamples  = np.array(trainSamples)
-    print trainSamples
+    targetSamples = np.array(targetSamples)
+    
+    alg1 = LogisticRegression(random_state=1)
+    scores = cross_val_score(alg1, trainSamples, targetSamples, cv=3)
+    print 'Logistic Regression : %f'%scores.mean()
+
+    alg2 = RandomForestClassifier(random_state=1, n_estimators=25, min_samples_split=4, min_samples_leaf=2)
+    scores = cross_val_score(alg2, trainSamples, targetSamples, cv=3)
+    print 'Random Forest : %f'%scores.mean()
+
+    alg3 = GradientBoostingClassifier(random_state=1, n_estimators=100, max_depth=4)
+    scores = cross_val_score(alg3, trainSamples, targetSamples, cv=3)
+    print 'Gradient Boosting : %f'%scores.mean()
+
+    alg4 = svm.SVC(random_state=1)
+    scores = cross_val_score(alg4, trainSamples, targetSamples, cv=3)
+    print 'Support Vector : %f'%scores.mean()
+
+    alg5 = GaussianNB()
+    scores = cross_val_score(alg5, trainSamples, targetSamples, cv=3)
+    print 'Gaussian Naive Bayes : %f'%scores.mean()
 
 
 # "userLang"
