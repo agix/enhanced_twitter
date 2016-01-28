@@ -14,12 +14,11 @@ from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.cross_validation import KFold, cross_val_score
 from sklearn import svm
 from sklearn.naive_bayes import GaussianNB
+import pickle
 
 if len(sys.argv) < 2:
-    print 'Usage: python %s <pull|qualify|train|test> (tweet id)'%sys.argv[0]
+    print 'Usage: python %s <pull|qualify|train|test>'%sys.argv[0]
     sys.exit(0)
-
-r = redis.StrictRedis(host='localhost', port=6379, db=3)
 
 def addFeature(statusDict, key, func=lambda x: x, default = 0):
     if key in statusDict:
@@ -77,16 +76,64 @@ def getNbTweets(userId, max_id, created_at, minutes = 60, count = 20):
             nb += 1
     return nb
 
+def getFilteredDict(statusDict):
+    filteredDict = {
+        'retweeted' : statusDict['retweeted'],
+        'favorited' : statusDict['favorited'],
+        'lang'      : statusDict['lang'],
+    }
+    origuser = getUserInfos(statusDict)
+    filteredDict.update(origuser)
+        
+    if 'retweeted_status' in statusDict:
+        filteredDict['retweeted_status'] = 1
+        filteredDict.update(getTweetInfos(statusDict['retweeted_status']))
+    else:
+        filteredDict['retweeted_status'] = 0
+        filteredDict.update(getTweetInfos(statusDict, origuser['origuserNbTweetsHour']))
 
+    return filteredDict
+
+def convertToScikit(trainRaw):
+    userLangs = {
+        'en' : float(1),
+        'fr' : float(2),
+        'ht' : float(3),
+        'de' : float(4),
+        'et' : float(5),
+        'es' : float(6),
+        'tl' : float(7),
+        'in' : float(8),
+        'da' : float(9),
+        'und': float(10),
+        'ro' : float(11),
+        'it' : float(12)
+    }
+
+    trainSample = [
+        userLangs[trainRaw['userLang']], float(trainRaw['retweeted_status']), float(bool(trainRaw['userProtected'])), 
+        float(bool(trainRaw['origuserVerified'])), userLangs[trainRaw['origuserLang']], float(bool(trainRaw['origuserProtected'])),
+        userLangs[trainRaw['lang']], float(trainRaw['userFollowers_count']), float(trainRaw['favorite_count']),
+        float(trainRaw['userId']), float(trainRaw['origuserId']), float(bool(trainRaw['userVerified'])), float(trainRaw['userNbTweetsHour']),
+        float(trainRaw['nbUser_mentions']), float(trainRaw['origuserFriends_count']), float(trainRaw['origuserFollowers_count']),
+        float(bool(trainRaw['retweeted'])), float(trainRaw['origuserNbTweetsHour']), float(trainRaw['nbMedia']), float(trainRaw['userFriends_count']),
+        float(trainRaw['retweet_count']), float(bool(trainRaw['favorited'])), float(trainRaw['nbHashtags'])
+    ]
+
+    return trainSample
+
+
+r = redis.StrictRedis(host='localhost', port=6379, db=3)
+r2 = redis.StrictRedis(host='localhost', port=6379, db=4)
+api = twitter.Api(
+    consumer_key        = secret.consumer_key, 
+    consumer_secret     = secret.consumer_secret, 
+    access_token_key    = secret.access_token_key, 
+    access_token_secret = secret.access_token_secret
+)
 
 if sys.argv[1] == 'pull':
     count = 150
-    api = twitter.Api(
-        consumer_key        = secret.consumer_key, 
-        consumer_secret     = secret.consumer_secret, 
-        access_token_key    = secret.access_token_key, 
-        access_token_secret = secret.access_token_secret
-    )
 
     statuses = api.GetHomeTimeline(count=count)
     print "Got your timeline"
@@ -96,23 +143,11 @@ if sys.argv[1] == 'pull':
         bar.next()
 
         try:
-            filteredDict = {
-                'retweeted' : statusDict['retweeted'],
-                'favorited' : statusDict['favorited'],
-                'lang'      : statusDict['lang'],
-            }
-            origuser = getUserInfos(statusDict)
-            filteredDict.update(origuser)
-                
+            filteredDict = getFilteredDict(statusDict)
             if 'retweeted_status' in statusDict:
-                filteredDict['retweeted_status'] = 1
-                filteredDict.update(getTweetInfos(statusDict['retweeted_status']))
                 created_at = datetime.datetime.strptime(statusDict['retweeted_status']['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
             else:
-                filteredDict['retweeted_status'] = 0
-                filteredDict.update(getTweetInfos(statusDict, origuser['origuserNbTweetsHour']))
                 created_at = datetime.datetime.strptime(statusDict['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
-
         except Exception as e:
             bar.finish()
             try:
@@ -159,32 +194,14 @@ elif sys.argv[1] == 'qualify':
     run(host='localhost', port=8081)
 
 elif sys.argv[1] == 'train':
-    userLangs = {
-        'en': float(1),
-        'fr': float(2),
-        'ht': float(3),
-        'de': float(4),
-        'et': float(5),
-        'es': float(6),
-        'tl': float(7),
-        'in': float(8),
-        'da': float(9),
-    }
     now = datetime.datetime.now()
     trainIds = r.keys('%04d%02d*'%(now.year, now.month))
     trainSamples = []
     targetSamples = []
     for trainId in trainIds:
         trainRaw = r.hgetall(trainId)
-        trainSample = [
-            userLangs[trainRaw['userLang']], float(trainRaw['retweeted_status']), float(bool(trainRaw['userProtected'])), 
-            float(bool(trainRaw['origuserVerified'])), userLangs[trainRaw['origuserLang']], float(bool(trainRaw['origuserProtected'])),
-            userLangs[trainRaw['lang']], float(trainRaw['userFollowers_count']), float(trainRaw['favorite_count']),
-            float(trainRaw['userId']), float(trainRaw['origuserId']), float(bool(trainRaw['userVerified'])), float(trainRaw['userNbTweetsHour']),
-            float(trainRaw['nbUser_mentions']), float(trainRaw['origuserFriends_count']), float(trainRaw['origuserFollowers_count']),
-            float(bool(trainRaw['retweeted'])), float(trainRaw['origuserNbTweetsHour']), float(trainRaw['nbMedia']), float(trainRaw['userFriends_count']),
-            float(trainRaw['retweet_count']), float(bool(trainRaw['favorited'])), float(trainRaw['nbHashtags'])
-        ]
+        trainSample = convertToScikit(trainRaw)
+
         if 'like' in trainRaw:
             targetSamples.append(float(trainRaw['like']))
         else:
@@ -198,22 +215,71 @@ elif sys.argv[1] == 'train':
     alg1 = LogisticRegression(random_state=1)
     scores = cross_val_score(alg1, trainSamples, targetSamples, cv=3)
     print 'Logistic Regression : %f'%scores.mean()
+    alg1.fit(trainSamples, targetSamples)
+    r2.set('LogisticRegression', pickle.dumps(alg1))
 
     alg2 = RandomForestClassifier(random_state=1, n_estimators=25, min_samples_split=4, min_samples_leaf=2)
     scores = cross_val_score(alg2, trainSamples, targetSamples, cv=3)
     print 'Random Forest : %f'%scores.mean()
+    alg2.fit(trainSamples, targetSamples)
+    r2.set('RandomForest', pickle.dumps(alg2))
 
-    alg3 = GradientBoostingClassifier(random_state=1, n_estimators=100, max_depth=4)
+    alg3 = GradientBoostingClassifier(random_state=1, n_estimators=25, max_depth=4)
     scores = cross_val_score(alg3, trainSamples, targetSamples, cv=3)
     print 'Gradient Boosting : %f'%scores.mean()
+    alg3.fit(trainSamples, targetSamples)
+    r2.set('GradientBoosting', pickle.dumps(alg3))
 
     alg4 = svm.SVC(random_state=1)
     scores = cross_val_score(alg4, trainSamples, targetSamples, cv=3)
     print 'Support Vector : %f'%scores.mean()
+    alg4.fit(trainSamples, targetSamples)
+    r2.set('SupportVector', pickle.dumps(alg4))
 
     alg5 = GaussianNB()
     scores = cross_val_score(alg5, trainSamples, targetSamples, cv=3)
     print 'Gaussian Naive Bayes : %f'%scores.mean()
+    alg5.fit(trainSamples, targetSamples)
+    r2.set('GaussianNaiveBayes', pickle.dumps(alg5))
+
+
+elif sys.argv[1] == 'test':
+    statuses = api.GetHomeTimeline(count=10)
+
+    testSamples = []
+    tweets = []
+    for status in statuses:
+        statusDict = status.AsDict()
+        tweets.append(str(statusDict['id']))
+        filteredDict = getFilteredDict(statusDict)
+        testSample = convertToScikit(filteredDict)
+        testSamples.append(testSample)
+
+    testSamples = np.array(testSamples)
+    algos = ['LogisticRegression', 'RandomForest', 'GradientBoosting', 'SupportVector', 'GaussianNaiveBayes']
+    results = {}
+    r2 = redis.StrictRedis(host='localhost', port=6379, db=4)
+
+    for algo in algos:
+        alg = pickle.loads(r2.get(algo))
+        result = map(lambda x: int(x), alg.predict(testSamples))
+        results.update({algo: result})
+
+    @route('/')
+    def index():
+        return template('result', results=results, tweets=tweets)
+
+    @route('/<id>')
+    def tweet(id):
+        t = requests.get('https://api.twitter.com/1/statuses/oembed.json?url=https://twitter.com/Interior/status/'+id)
+        response.content_type = 'application/json'
+        return t.text
+
+    run(host='localhost', port=8081)
+    
+
+
+
 
 
 # "userLang"
