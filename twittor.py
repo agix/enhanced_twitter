@@ -7,7 +7,7 @@ from json import dumps, loads
 import secret
 
 if len(sys.argv) != 2:
-    print 'Usage: %s <pull|qualify|train>'
+    print 'Usage: python %s <pull|qualify|train>'%sys.argv[0]
     sys.exit(0)
 
 r = redis.StrictRedis(host='localhost', port=6379, db=3)
