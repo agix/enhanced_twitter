@@ -9,7 +9,7 @@ import datetime
 from progress.bar import Bar
 import numpy as np
 
-if len(sys.argv) != 2:
+if len(sys.argv) < 2:
     print 'Usage: python %s <pull|qualify|train|test> (tweet id)'%sys.argv[0]
     sys.exit(0)
 
@@ -128,16 +128,17 @@ elif sys.argv[1] == 'qualify':
         if len(sys.argv) == 2:
             tweets = []
             for tweetId in tweetIds:
-                if not r.hget(tweetId, 'like'):
-                    tweets.append(tweetId.split('_')[1])
+                if r.hget(tweetId, 'like') == None:
+                    tweets.append(tweetId)
         else:
-            tweets = map(lambda x: x.split('_')[1], tweetIds)
+            tweets = tweetIds
         return template('index', tweets=tweets)
 
     @route('/<id>')
     def tweet(id):
         like = r.hget(id, 'like')
-        t = requests.get('https://api.twitter.com/1/statuses/oembed.json?url=https://twitter.com/Interior/status/'+id)
+        tweetId = id.split('_')[1]
+        t = requests.get('https://api.twitter.com/1/statuses/oembed.json?url=https://twitter.com/Interior/status/'+tweetId)
         content = loads(t.text)
         content['like'] = like
         response.content_type = 'application/json'
