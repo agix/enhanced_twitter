@@ -158,6 +158,11 @@ function keyPress(keyPressed){
                 keyPress(39);
             });
             break;
+        case 85:
+            //u
+            GET(tweets[id]+'/u', function(){
+                keyPress(39);
+            });
     }
     if(keyPressed === 37 || keyPressed === 39){
         getTweet(tweets[id]);

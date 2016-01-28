@@ -70,23 +70,25 @@ function getTweet(tweet){
         twttr.widgets.load(currentTweet);
 
         var content = '';
-
+        var score = 0;
         for (var algo in results) {
             var choice;
             if(results[algo][id] === -1){
+                score -= 0.2;
                 choice = '<span style="color: red">Bad</span>';
             }
             else if(results[algo][id] === 0){
                 choice = '<span style="color: blue">Osef</span>';
             }
             else if(results[algo][id] === 1){
+                score += 0.2;
                 choice = '<span style="color: green">Good</span>';
             }
 
             content += algo+' : '+choice+'<br />';
         }
 
-        document.getElementById('results').innerHTML = content;
+        document.getElementById('results').innerHTML = content+'Score : '+Math.floor(score);
     });
 }
 

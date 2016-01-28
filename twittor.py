@@ -15,6 +15,7 @@ from sklearn.cross_validation import KFold, cross_val_score
 from sklearn import svm
 from sklearn.naive_bayes import GaussianNB
 import pickle
+from textblob import TextBlob
 
 if len(sys.argv) < 2:
     print 'Usage: python %s <pull|qualify|train|test>'%sys.argv[0]
@@ -41,7 +42,6 @@ def getTweetInfos(statusDict, nbTweets = -1):
     filteredDict['hashtags']         = addFeature(statusDict, 'hashtags', lambda x: ' '.join(x), '')
     
     filteredDict['text']             = statusDict['text']
-
 
     filteredDict.update(getUserInfos(statusDict, 'user', nbTweets))
 
@@ -95,7 +95,7 @@ def getFilteredDict(statusDict):
     return filteredDict
 
 def convertToScikit(trainRaw):
-    userLangs = {
+    langs = {
         'en' : float(1),
         'fr' : float(2),
         'ht' : float(3),
@@ -109,15 +109,35 @@ def convertToScikit(trainRaw):
         'ro' : float(11),
         'it' : float(12)
     }
+    if trainRaw['lang'] != 'en':
+        try:
+            blob = TextBlob(trainRaw['text'].replace(u'\u2019', '\''))
+        except Exception as e:
+            print e
+            print trainRaw['text']
+            sys.exit()
+        try:
+            text = blob.translate(to='en')
+        except:
+            text = blob
+    else:
+        try:
+            text = TextBlob(trainRaw['text'].replace(u'\u2019', '\''))
+        except Exception as e:
+            print e
+            print trainRaw['text']
+            sys.exit()
+    polarity = text.sentiment.polarity
+    subjectivity = text.sentiment.subjectivity
 
     trainSample = [
-        userLangs[trainRaw['userLang']], float(trainRaw['retweeted_status']), float(bool(trainRaw['userProtected'])), 
-        float(bool(trainRaw['origuserVerified'])), userLangs[trainRaw['origuserLang']], float(bool(trainRaw['origuserProtected'])),
-        userLangs[trainRaw['lang']], float(trainRaw['userFollowers_count']), float(trainRaw['favorite_count']),
+        langs[trainRaw['userLang']], float(trainRaw['retweeted_status']), float(bool(trainRaw['userProtected'])), 
+        float(bool(trainRaw['origuserVerified'])), langs[trainRaw['origuserLang']], float(bool(trainRaw['origuserProtected'])),
+        langs[trainRaw['lang']], float(trainRaw['userFollowers_count']), float(trainRaw['favorite_count']),
         float(trainRaw['userId']), float(trainRaw['origuserId']), float(bool(trainRaw['userVerified'])), float(trainRaw['userNbTweetsHour']),
         float(trainRaw['nbUser_mentions']), float(trainRaw['origuserFriends_count']), float(trainRaw['origuserFollowers_count']),
         float(bool(trainRaw['retweeted'])), float(trainRaw['origuserNbTweetsHour']), float(trainRaw['nbMedia']), float(trainRaw['userFriends_count']),
-        float(trainRaw['retweet_count']), float(bool(trainRaw['favorited'])), float(trainRaw['nbHashtags'])
+        float(trainRaw['retweet_count']), float(bool(trainRaw['favorited'])), float(trainRaw['nbHashtags']), polarity, subjectivity
     ]
 
     return trainSample
@@ -187,7 +207,10 @@ elif sys.argv[1] == 'qualify':
 
     @route('/<id>/<state>')
     def choice(id, state):
-        r.hset(id, 'like', state)
+        if state == 'u':
+            r.delete(id)
+        else:
+            r.hset(id, 'like', state)
         response.content_type = 'application/json'
         return dumps('ok');
 
