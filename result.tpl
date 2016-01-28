@@ -88,7 +88,7 @@ function getTweet(tweet){
             content += algo+' : '+choice+'<br />';
         }
 
-        document.getElementById('results').innerHTML = content+'Score : '+Math.floor(score);
+        document.getElementById('results').innerHTML = content+'Score : '+Math.floor(score*10);
     });
 }
 
