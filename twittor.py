@@ -16,7 +16,6 @@ from sklearn import svm
 from sklearn.naive_bayes import GaussianNB
 import pickle
 from textblob import TextBlob
-from unidecode import unidecode
 
 if len(sys.argv) < 2:
     print 'Usage: python %s <pull|qualify|train|test>'%sys.argv[0]
