@@ -10,6 +10,7 @@
 <div style="display:inline;">
     <button id="previous">&lt;- Previous</button>
     <button id="good">GOOD</button>
+    <button id="osef">OSEF</button>
     <button id="notgood">NOTGOOD</button>
     <button id="next">Next -&gt;</button>
 </div>
@@ -26,6 +27,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         function (event) {
             if(document.getElementById('good').style.fontSize === '15px'){
                 document.getElementById('currentTweet').children[0].style.border = '1px solid green';
+            }
+            else if(document.getElementById('osef').style.fontSize === '15px'){
+                document.getElementById('currentTweet').children[0].style.border = '1px solid blue';
             }
             else if(document.getElementById('notgood').style.fontSize === '15px'){
                 document.getElementById('currentTweet').children[0].style.border = '1px solid red';
@@ -67,15 +71,23 @@ function getTweet(tweet){
 
         if(data.like === '1'){
             document.getElementById('good').style.fontSize = 15;
+            document.getElementById('osef').style.fontSize = 13;
             document.getElementById('notgood').style.fontSize = 13;
         }
         else if(data.like === '0'){
-            document.getElementById('notgood').style.fontSize = 15;
             document.getElementById('good').style.fontSize = 13;
+            document.getElementById('osef').style.fontSize = 15;
+            document.getElementById('notgood').style.fontSize = 13;
+        }
+        else if(data.like === '-1'){
+            document.getElementById('good').style.fontSize = 13;
+            document.getElementById('osef').style.fontSize = 13;
+            document.getElementById('notgood').style.fontSize = 15;
         }
         else{
-            document.getElementById('notgood').style.fontSize = 13;
             document.getElementById('good').style.fontSize = 13;
+            document.getElementById('osef').style.fontSize = 13;
+            document.getElementById('notgood').style.fontSize = 13;
         }
     });
 }
@@ -87,8 +99,14 @@ document.getElementById('good').onclick = function(event){
     });
 }
 
-document.getElementById('notgood').onclick = function(event){
+document.getElementById('osef').onclick = function(event){
     GET(tweets[id]+'/0', function(){
+        keyPress(39);
+    });
+}
+
+document.getElementById('notgood').onclick = function(event){
+    GET(tweets[id]+'/-1', function(){
         keyPress(39);
     });
 }
