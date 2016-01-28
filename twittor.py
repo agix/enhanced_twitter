@@ -38,22 +38,22 @@ def getTweetInfos(statusDict, nbTweets = -1):
     filteredDict['text']             = statusDict['text']
 
 
-    filteredDict.update(getUserInfos(statusDict, nbTweets))
+    filteredDict.update(getUserInfos(statusDict, 'user', nbTweets))
 
     return filteredDict
 
 
-def getUserInfos(statusDict, prefix = 'user', nbTweets = -1):
+def getUserInfos(statusDict, prefix = 'origuser', nbTweets = -1):
     filteredDict = {}
-    filteredDict[prefix+'Followers_count'] = addFeature(statusDict, 'followers_count')
-    filteredDict[prefix+'Friends_count']   = addFeature(statusDict, 'friends_count')
-    filteredDict[prefix+'Protected']       = statusDict['user']['protected']
-    filteredDict[prefix+'Lang']            = statusDict['user']['lang']
-    filteredDict[prefix+'Id']              = statusDict['user']['id']
-    filteredDict[prefix+'Screen_name']     = statusDict['user']['screen_name']
-    filteredDict[prefix+'Verified']        = 'verified' in statusDict['user']
+    filteredDict[prefix+'Followers_count']  = addFeature(statusDict, 'followers_count')
+    filteredDict[prefix+'Friends_count']    = addFeature(statusDict, 'friends_count')
+    filteredDict[prefix+'Protected']        = statusDict['user']['protected']
+    filteredDict[prefix+'Lang']             = statusDict['user']['lang']
+    filteredDict[prefix+'Id']               = statusDict['user']['id']
+    filteredDict[prefix+'Screen_name']      = statusDict['user']['screen_name']
+    filteredDict[prefix+'Verified']         = 'verified' in statusDict['user']
     if nbTweets == -1:
-        filteredDict[prefix+'NbTweetsHour']    = getNbTweets(statusDict['user']['id'], statusDict['id'], statusDict['created_at'])
+        filteredDict[prefix+'NbTweetsHour'] = getNbTweets(statusDict['user']['id'], statusDict['id'], statusDict['created_at'])
     else:
         filteredDict[prefix+'NbTweetsHour'] = nbTweets
     return filteredDict
@@ -95,7 +95,7 @@ if sys.argv[1] == 'pull':
                 'favorited' : statusDict['favorited'],
                 'lang'      : statusDict['lang'],
             }
-            origuser = getUserInfos(statusDict, 'origuser')
+            origuser = getUserInfos(statusDict)
             filteredDict.update(origuser)
                 
             if 'retweeted_status' in statusDict:
@@ -108,12 +108,14 @@ if sys.argv[1] == 'pull':
                 created_at = datetime.datetime.strptime(statusDict['created_at'], '%a %b %d %H:%M:%S +0000 %Y')
 
         except Exception as e:
-            if e[0][0]['code'] == 88:
-                bar.finish()
-                print e[0][0]['message']
-                sys.exit()
-            print e
-            print status.AsJsonString()
+            bar.finish()
+            try:
+                if e[0][0]['code'] == 88:
+                    print e[0][0]['message']
+                    sys.exit()
+            except Exception as e2:
+                print e2
+                print status.AsJsonString()
 
         tweetId = '%04d%02d%02d_%d'%(created_at.year, created_at.month, created_at.day, statusDict['id'])
         r.hmset(tweetId, filteredDict)
