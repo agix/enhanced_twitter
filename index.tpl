@@ -84,13 +84,13 @@ function getTweet(tweet){
 
 document.getElementById('good').onclick = function(event){
     GET(tweets[id]+'/1', function(){
-        getTweet(tweets[id]);
+        keyPress(39);
     });
 }
 
 document.getElementById('notgood').onclick = function(event){
     GET(tweets[id]+'/0', function(){
-        getTweet(tweets[id]);
+        keyPress(39);
     });
 }
 
