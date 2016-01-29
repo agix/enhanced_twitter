@@ -113,7 +113,8 @@ def convertToScikit(trainRaw):
         'zh-cn': float(13),
         'nl': float(14),
         'ru': float(15),
-        'lt': float(16)
+        'lt': float(16),
+        'ja': float(17)
     }
     if trainRaw['lang'] != 'en':
         try:
