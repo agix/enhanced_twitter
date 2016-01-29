@@ -109,11 +109,18 @@ def convertToScikit(trainRaw):
         'da' : float(9),
         'und': float(10),
         'ro' : float(11),
-        'it' : float(12)
+        'it' : float(12),
+        'zh-cn': float(13),
+        'nl': float(14),
+        'ru': float(15),
+        'lt': float(16)
     }
     if trainRaw['lang'] != 'en':
         try:
-            blob = TextBlob(trainRaw['text'].decode('utf8'))
+            if type(trainRaw['text']) == type('ab'):
+                blob = TextBlob(trainRaw['text'].decode('utf8'))
+            else:
+                blob = TextBlob(trainRaw['text'])
         except Exception as e:
             print type(trainRaw['text'])
             print trainRaw['text']
@@ -125,7 +132,10 @@ def convertToScikit(trainRaw):
             text = blob
     else:
         try:
-            text = TextBlob(trainRaw['text'].decode('utf8'))
+            if type(trainRaw['text']) == type('ab'):
+                text = TextBlob(trainRaw['text'].decode('utf8'))
+            else:
+                text = TextBlob(trainRaw['text'])
         except Exception as e:
             print type(trainRaw['text'])
             print trainRaw['text']
@@ -143,6 +153,14 @@ def convertToScikit(trainRaw):
         float(bool(trainRaw['retweeted'])), float(trainRaw['origuserNbTweetsHour']), float(trainRaw['nbMedia']), float(trainRaw['userFriends_count']),
         float(trainRaw['retweet_count']), float(bool(trainRaw['favorited'])), float(trainRaw['nbHashtags']), polarity, subjectivity
     ]
+    # trainSample = [
+    #     langs[trainRaw['lang']], float(trainRaw['userFollowers_count']), float(trainRaw['favorite_count']),
+    #     float(trainRaw['userId']), float(trainRaw['origuserId']), float(trainRaw['userNbTweetsHour']),
+    #     float(trainRaw['nbUser_mentions']), float(trainRaw['origuserFriends_count']), float(trainRaw['origuserFollowers_count']),
+    #     float(trainRaw['origuserNbTweetsHour']), float(trainRaw['nbMedia']), float(trainRaw['userFriends_count']),
+    #     float(trainRaw['retweet_count']), float(trainRaw['nbHashtags']), polarity, subjectivity
+    # ]
+    
 
     return trainSample
 
