@@ -9,7 +9,7 @@ Enhanced twitter experience with machine learning
 * `pip install redis`
 * `pip install progress`
 * `pip install numpy`
-* `pip install scikit-learn`
+* `git clone https://github.com/scikit-learn/scikit-learn && cd scikit-learn && sudo python setup.py`
 * `pip install textblob`
 * `python -m textblob.download_corpora`
  

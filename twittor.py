@@ -11,9 +11,11 @@ import numpy as np
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn.cross_validation import KFold, cross_val_score
+from sklearn.model_selection import cross_val_predict
 from sklearn import svm
+from sklearn.metrics import accuracy_score
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
 import pickle
 from textblob import TextBlob
 
@@ -237,35 +239,57 @@ elif sys.argv[1] == 'train':
     trainSamples  = np.array(trainSamples)
     targetSamples = np.array(targetSamples)
     
+    sumScore = 0
+
     alg1 = LogisticRegression(random_state=1)
-    scores = cross_val_score(alg1, trainSamples, targetSamples, cv=3)
-    print 'Logistic Regression : %f'%scores.mean()
+    predicted = cross_val_predict(alg1, trainSamples, targetSamples, cv=3)
+    score = accuracy_score(targetSamples, predicted)
+    print 'Logistic Regression : %f'%score.mean()
+    sumScore += score.mean()
     alg1.fit(trainSamples, targetSamples)
     r2.set('LogisticRegression', pickle.dumps(alg1))
 
     alg2 = RandomForestClassifier(random_state=1, n_estimators=25, min_samples_split=4, min_samples_leaf=2)
-    scores = cross_val_score(alg2, trainSamples, targetSamples, cv=3)
-    print 'Random Forest : %f'%scores.mean()
+    predicted = cross_val_predict(alg2, trainSamples, targetSamples, cv=3)
+    score = accuracy_score(targetSamples, predicted)
+    print 'Random Forest : %f'%score.mean()
+    sumScore += score.mean()
     alg2.fit(trainSamples, targetSamples)
     r2.set('RandomForest', pickle.dumps(alg2))
 
     alg3 = GradientBoostingClassifier(random_state=1, n_estimators=25, max_depth=4)
-    scores = cross_val_score(alg3, trainSamples, targetSamples, cv=3)
-    print 'Gradient Boosting : %f'%scores.mean()
+    predicted = cross_val_predict(alg3, trainSamples, targetSamples, cv=3)
+    score = accuracy_score(targetSamples, predicted)
+    print 'Gradient Boosting : %f'%score.mean()
+    sumScore += score.mean()
     alg3.fit(trainSamples, targetSamples)
     r2.set('GradientBoosting', pickle.dumps(alg3))
 
     alg4 = svm.SVC(random_state=1)
-    scores = cross_val_score(alg4, trainSamples, targetSamples, cv=3)
-    print 'Support Vector : %f'%scores.mean()
+    predicted = cross_val_predict(alg4, trainSamples, targetSamples, cv=3)
+    score = accuracy_score(targetSamples, predicted)
+    print 'Support Vector : %f'%score.mean()
+    sumScore += score.mean()
     alg4.fit(trainSamples, targetSamples)
     r2.set('SupportVector', pickle.dumps(alg4))
 
     alg5 = GaussianNB()
-    scores = cross_val_score(alg5, trainSamples, targetSamples, cv=3)
-    print 'Gaussian Naive Bayes : %f'%scores.mean()
+    predicted = cross_val_predict(alg5, trainSamples, targetSamples, cv=3)
+    score = accuracy_score(targetSamples, predicted)
+    print 'Gaussian Naive Bayes : %f'%score.mean()
+    sumScore += score.mean()
     alg5.fit(trainSamples, targetSamples)
     r2.set('GaussianNaiveBayes', pickle.dumps(alg5))
+
+    alg6 = MLPClassifier(algorithm='l-bfgs', alpha=1e-5, hidden_layer_sizes=(15, 4), random_state=1)
+    predicted = cross_val_predict(alg6, trainSamples, targetSamples, cv=3)
+    score = accuracy_score(targetSamples, predicted)
+    print 'Perceptron : %f'%score.mean()
+    sumScore += score.mean()
+    alg6.fit(trainSamples, targetSamples)
+    r2.set('Perceptron', pickle.dumps(alg6))
+
+    print sumScore/6
 
 
 elif sys.argv[1] == 'test':
@@ -281,7 +305,7 @@ elif sys.argv[1] == 'test':
         testSamples.append(testSample)
 
     testSamples = np.array(testSamples)
-    algos = ['LogisticRegression', 'RandomForest', 'GradientBoosting', 'SupportVector', 'GaussianNaiveBayes']
+    algos = ['LogisticRegression', 'RandomForest', 'GradientBoosting', 'SupportVector', 'GaussianNaiveBayes', 'Perceptron']
     results = {}
     r2 = redis.StrictRedis(host='localhost', port=6379, db=4)
 

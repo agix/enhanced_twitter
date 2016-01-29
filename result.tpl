@@ -74,14 +74,14 @@ function getTweet(tweet){
         for (var algo in results) {
             var choice;
             if(results[algo][id] === -1){
-                score -= 0.2;
+                score -= (10/Object.keys(results).length);
                 choice = '<span style="color: red">Bad</span>';
             }
             else if(results[algo][id] === 0){
                 choice = '<span style="color: blue">Osef</span>';
             }
             else if(results[algo][id] === 1){
-                score += 0.2;
+                score += (10/Object.keys(results).length);
                 choice = '<span style="color: green">Good</span>';
             }
 
